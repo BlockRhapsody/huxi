@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>息 · BREATH</title>
+<style>
+:root{
+  --bg:#050507;
+  --fg:#e8e6f0;
+  --accent:#7b6fd0;
+  --accent2:#3fa9c9;
+  --accent3:#d070a0;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{
+  width:100%;height:100%;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:-apple-system,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;
+  overflow:hidden;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#canvas{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  z-index:1;
+}
+#ui{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+#intro{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  z-index:10;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(5,5,7,0.92);
+  backdrop-filter:blur(20px);
+  transition:opacity 2s cubic-bezier(0.4,0,0.2,1), visibility 2s;
+  cursor:pointer;
+  pointer-events:all;
+}
+#intro.gone{
+  opacity:0;
+  visibility:hidden;
+}
+#intro h1{
+  font-size:clamp(2rem,8vw,4.5rem);
+  font-weight:200;
+  letter-spacing:0.5em;
+  margin-bottom:0.3em;
+  text-indent:0.5em;
+  background:linear-gradient(135deg,#fff 0%,#aaa 50%,#666 100%);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+#intro .sub{
+  font-size:clamp(0.75rem,2.5vw,1rem);
+  font-weight:300;
+  letter-spacing:0.3em;
+  color:rgba(232,230,240,0.4);
+  text-indent:0.3em;
+  margin-bottom:3em;
+}
+#intro .hint{
+  font-size:clamp(0.7rem,2vw,0.85rem);
+  font-weight:300;
+  letter-spacing:0.15em;
+  color:rgba(232,230,240,0.25);
+  animation:breathe 4s ease-in-out infinite;
+}
+@keyframes breathe{
+  0%,100%{opacity:0.15}
+  50%{opacity:0.5}
+}
+#phase-text{
+  position:fixed;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  font-size:clamp(1.2rem,4vw,2rem);
+  font-weight:200;
+  letter-spacing:0.4em;
+  text-indent:0.4em;
+  color:rgba(255,255,255,0.85);
+  text-shadow:0 0 40px rgba(123,111,208,0.5);
+  z-index:3;
+  pointer-events:none;
+  transition:opacity 0.8s ease;
+  white-space:nowrap;
+}
+#cycle-info{
+  position:fixed;
+  bottom:8%;left:50%;
+  transform:translateX(-50%);
+  font-size:clamp(0.65rem,2vw,0.8rem);
+  font-weight:300;
+  letter-spacing:0.2em;
+  color:rgba(232,230,240,0.2);
+  z-index:3;
+  pointer-events:none;
+  display:flex;
+  gap:2em;
+  align-items:center;
+}
+#cycle-info .dot{
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 10px var(--accent);
+  animation:pulse-dot 4s ease-in-out infinite;
+}
+@keyframes pulse-dot{
+  0%,100%{opacity:0.3;transform:scale(1)}
+  50%{opacity:1;transform:scale(1.5)}
+}
+#settings-btn{
+  position:fixed;
+  top:max(1.5rem,env(safe-area-inset-top));
+  right:max(1.5rem,env(safe-area-inset-right));
+  width:44px;height:44px;
+  border:none;
+  background:rgba(255,255,255,0.03);
+  border-radius:50%;
+  color:rgba(232,230,240,0.3);
+  font-size:1.2rem;
+  cursor:pointer;
+  pointer-events:all;
+  z-index:5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all 0.4s ease;
+  backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,0.04);
+}
+#settings-btn:hover{
+  background:rgba(255,255,255,0.08);
+  color:rgba(232,230,240,0.7);
+}
+#settings-panel{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  z-index:20;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  background:rgba(5,5,7,0.95);
+  backdrop-filter:blur(30px);
+  opacity:0;
+  visibility:hidden;
+  transition:opacity 0.6s ease,visibility 0.6s;
+  pointer-events:none;
+  gap:2.5em;
+  padding:2rem;
+}
+#settings-panel.open{
+  opacity:1;
+  visibility:visible;
+  pointer-events:all;
+}
+#settings-panel h2{
+  font-size:clamp(1rem,3vw,1.4rem);
+  font-weight:200;
+  letter-spacing:0.3em;
+  color:rgba(232,230,240,0.6);
+  margin-bottom:0.5em;
+}
+.pattern-group{
+  display:flex;
+  flex-direction:column;
+  gap:1em;
+  align-items:center;
+}
+.pattern-btn{
+  padding:1em 2.5em;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.02);
+  color:rgba(232,230,240,0.5);
+  font-size:0.85rem;
+  font-weight:300;
+  letter-spacing:0.15em;
+  border-radius:2em;
+  cursor:pointer;
+  transition:all 0.4s ease;
+  font-family:inherit;
+  min-width:200px;
+}
+.pattern-btn:hover,.pattern-btn.active{
+  border-color:var(--accent);
+  color:var(--fg);
+  background:rgba(123,111,208,0.08);
+  box-shadow:0 0 30px rgba(123,111,208,0.1);
+}
+.pattern-btn .nums{
+  font-size:0.7em;
+  opacity:0.5;
+  margin-top:0.3em;
+  display:block;
+}
+#close-settings{
+  margin-top:1em;
+  padding:0.8em 2em;
+  border:1px solid rgba(255,255,255,0.1);
+  background:transparent;
+  color:rgba(232,230,240,0.4);
+  font-size:0.8rem;
+  font-weight:300;
+  letter-spacing:0.2em;
+  border-radius:2em;
+  cursor:pointer;
+  font-family:inherit;
+  transition:all 0.3s ease;
+}
+#close-settings:hover{
+  color:var(--fg);
+  border-color:rgba(255,255,255,0.3);
+}
+#quote{
+  position:fixed;
+  bottom:14%;left:50%;
+  transform:translateX(-50%);
+  font-size:clamp(0.7rem,2.2vw,0.85rem);
+  font-weight:300;
+  letter-spacing:0.1em;
+  color:rgba(232,230,240,0.12);
+  z-index:3;
+  pointer-events:none;
+  max-width:80%;
+  text-align:center;
+  line-height:1.8;
+  transition:opacity 1.5s ease;
+}
+@media (max-width:600px){
+  #phase-text{letter-spacing:0.25em;font-size:1.1rem}
+  #cycle-info{bottom:5%}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<div id="phase-text"></div>
+<div id="quote"></div>
+<div id="cycle-info">
+  <span class="dot"></span>
+  <span id="cycle-count">第 Ⅰ 息</span>
+</div>
+
+<button id="settings-btn" aria-label="设置">◐</button>
+
+<div id="settings-panel">
+  <h2>呼吸节律</h2>
+  <div class="pattern-group">
+    <button class="pattern-btn active" data-pattern="0">
+      盒式呼吸
+      <span class="nums">4 · 4 · 4 · 4</span>
+    </button>
+    <button class="pattern-btn" data-pattern="1">
+      深度放松
+      <span class="nums">4 · 7 · 8 · 0</span>
+    </button>
+    <button class="pattern-btn" data-pattern="2">
+      等长平衡
+      <span class="nums">5 · 0 · 5 · 0</span>
+    </button>
+    <button class="pattern-btn" data-pattern="3">
+      冥想节奏
+      <span class="nums">6 · 2 · 6 · 2</span>
+    </button>
+  </div>
+  <button id="close-settings">返回</button>
+</div>
+
+<div id="intro">
+  <h1>息</h1>
+  <div class="sub">B R E A T H &nbsp;·&nbsp; 存在之息</div>
+  <div class="hint">点击屏幕 · 开始呼吸</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// 息 · BREATH — 一个功能，做到极致
+// ═══════════════════════════════════════════════════════════════════
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const phaseText = document.getElementById('phase-text');
+const cycleCount = document.getElementById('cycle-count');
+const introEl = document.getElementById('intro');
+const settingsPanel = document.getElementById('settings-panel');
+const settingsBtn = document.getElementById('settings-btn');
+const closeSettings = document.getElementById('close-settings');
+const quoteEl = document.getElementById('quote');
+
+// ── 呼吸节律模式 ──
+const PATTERNS = [
+  { name: '盒式', phases: [4,4,4,4], labels: ['吸气','屏息','呼气','屏息'], color1:[123,111,208], color2:[63,169,201] },
+  { name: '深度放松', phases: [4,7,8,0], labels: ['吸气','屏息','呼气',''], color1:[120,100,220], color2:[80,160,180] },
+  { name: '等长', phases: [5,0,5,0], labels: ['吸气','','呼气',''], color1:[100,140,220], color2:[180,120,200] },
+  { name: '冥想', phases: [6,2,6,2], labels: ['吸气','屏息','呼气','屏息'], color1:[140,110,200], color2:[90,150,190] },
+];
+
+let currentPattern = 0;
+let isRunning = false;
+let breathPhase = 0;       // 0=inhale 1=holdIn 2=exhale 3=holdOut
+let phaseProgress = 0;     // 0~1 within current phase
+let cycleNumber = 1;
+let startTime = 0;
+let lastFrameTime = 0;
+let breathValue = 0;       // 0~1 smoothed breath intensity
+let targetBreath = 0;
+
+// ── Canvas 尺寸 ──
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── 粒子系统 ──
+const PARTICLE_COUNT = 260;
+let particles = [];
+
+function initParticles(){
+  particles = [];
+  for(let i=0;i<PARTICLE_COUNT;i++){
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * Math.min(W,H) * 0.35;
+    particles.push({
+      baseAngle: angle,
+      baseRadius: radius,
+      radiusOffset: (Math.random()-0.5) * 60,
+      size: Math.random() * 2.2 + 0.3,
+      speed: (Math.random() * 0.08 + 0.02) * (Math.random()<0.5?1:-1),
+      depth: Math.random(),
+      twinkleSpeed: Math.random() * 0.03 + 0.005,
+      twinklePhase: Math.random() * Math.PI * 2,
+      orbitRadius: Math.random() * 20 + 5,
+    });
+  }
+}
+initParticles();
+
+// ── 音景系统 (Web Audio API) ──
+let audioCtx = null;
+let masterGain = null;
+let osc1, osc2, osc3;
+let filterNode, lfoNode, lfoGain;
+let isAudioInitialized = false;
+
+function initAudio(){
+  if(isAudioInitialized) return;
+  try{
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0;
+    masterGain.connect(audioCtx.destination);
+
+    // 三振荡器失谐铺底
+    osc1 = audioCtx.createOscillator();
+    osc2 = audioCtx.createOscillator();
+    osc3 = audioCtx.createOscillator();
+    osc1.type = 'sine'; osc2.type = 'sine'; osc3.type = 'sine';
+    osc1.frequency.value = 110; // A2
+    osc2.frequency.value = 110 * 1.003;
+    osc3.frequency.value = 110 * 0.997;
+
+    // 低通滤波器
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = 'lowpass';
+    filterNode.frequency.value = 400;
+    filterNode.Q.value = 0.7;
+
+    // LFO 调制滤波器
+    lfoNode = audioCtx.createOscillator();
+    lfoGain = audioCtx.createGain();
+    lfoNode.frequency.value = 0.1;
+    lfoGain.gain.value = 80;
+    lfoNode.connect(lfoGain);
+    lfoGain.connect(filterNode.frequency);
+
+    // 各自音量
+    const g1 = audioCtx.createGain(); g1.gain.value = 0.25;
+    const g2 = audioCtx.createGain(); g2.gain.value = 0.2;
+    const g3 = audioCtx.createGain(); g3.gain.value = 0.15;
+
+    osc1.connect(g1); g1.connect(filterNode);
+    osc2.connect(g2); g2.connect(filterNode);
+    osc3.connect(g3); g3.connect(filterNode);
+    filterNode.connect(masterGain);
+
+    osc1.start(); osc2.start(); osc3.start(); lfoNode.start();
+    isAudioInitialized = true;
+  }catch(e){
+    console.log('Audio not available:', e);
+  }
+}
+
+function updateAudio(breathVal){
+  if(!isAudioInitialized || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  // 呼吸驱动音量 (指数曲线更自然)
+  const targetVol = Math.pow(breathVal, 1.5) * 0.18;
+  masterGain.gain.setTargetAtTime(targetVol, t, 0.5);
+
+  // 呼吸驱动滤波器频率
+  const targetFreq = 300 + breathVal * 600;
+  filterNode.frequency.setTargetAtTime(targetFreq, t, 0.3);
+
+  // 呼吸驱动LFO速度
+  const targetLfo = 0.05 + breathVal * 0.2;
+  lfoNode.frequency.setTargetAtTime(targetLfo, t, 0.5);
+
+  // 频率随呼吸微变
+  const baseFreq = 108 + breathVal * 4;
+  osc1.frequency.setTargetAtTime(baseFreq, t, 0.8);
+  osc2.frequency.setTargetAtTime(baseFreq * 1.003, t, 0.8);
+  osc3.frequency.setTargetAtTime(baseFreq * 0.997, t, 0.8);
+}
+
+function playPhaseTone(phase){
+  if(!isAudioInitialized || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  const freqs = [220, 0, 165, 0]; // A3 inhale, rest, E3 exhale, rest
+  if(freqs[phase] === 0) return;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freqs[phase];
+  gain.gain.value = 0;
+  gain.gain.linearRampToValueAtTime(0.06, t + 0.1);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 1.2);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(t);
+  osc.stop(t + 1.3);
+}
+
+function playCompleteChime(){
+  if(!isAudioInitialized || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  [523.25, 659.25, 783.99].forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.value = 0;
+    gain.gain.linearRampToValueAtTime(0.03, t + i * 0.15 + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.15 + 2.0);
+    osc.connect(gain);
+    gain.connect(masterGain);
+    osc.start(t + i * 0.15);
+    osc.stop(t + i * 0.15 + 2.1);
+  });
+}
+
+// ── 触感反馈 ──
+function vibrate(pattern){
+  if(navigator.vibrate){
+    navigator.vibrate(pattern);
+  }
+}
+
+// ── 呼吸哲学语录 ──
+const QUOTES = [
+  '呼吸是唯一你既能主动控制又能完全放手的身体功能。',
+  '吸气是接收，屏息是容纳，呼气是释放。',
+  '不必追寻平静，平静一直在你的一呼一吸之间。',
+  '你不需要学会呼吸，你只需要注意到你在呼吸。',
+  '每一次呼吸都是一次微小的重生。',
+  '呼吸不会评判你，它只是温柔地持续着。',
+  '在这个被点击的世界里，呼吸是你最后的自由。',
+  '一息之间，三千世界。',
+  '不要控制呼吸，让呼吸引导你回到此刻。',
+  '你带来的一切都在此刻被接纳，你释放的一切在此刻消融。',
+];
+
+// ── 核心呼吸逻辑 ──
+function getPhaseDuration(pattern, phase){
+  const p = PATTERNS[pattern].phases[phase];
+  return p === 0 ? 0 : p;
+}
+
+function updateBreath(dt){
+  const pattern = PATTERNS[currentPattern];
+  const dur = getPhaseDuration(currentPattern, breathPhase);
+
+  if(dur === 0){
+    // 跳过零长度阶段
+    nextPhase();
+    return;
+  }
+
+  phaseProgress += dt / dur;
+
+  if(phaseProgress >= 1){
+    phaseProgress = 0;
+    nextPhase();
+    return;
+  }
+
+  // 计算当前呼吸值
+  const easeInOut = t => t < 0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+
+  if(breathPhase === 0){ // 吸气
+    targetBreath = easeInOut(phaseProgress);
+  } else if(breathPhase === 1){ // 屏息（吸）
+    targetBreath = 1;
+  } else if(breathPhase === 2){ // 呼气
+    targetBreath = 1 - easeInOut(phaseProgress);
+  } else { // 屏息（呼）
+    targetBreath = 0;
+  }
+
+  // 平滑过渡
+  breathValue += (targetBreath - breathValue) * Math.min(dt * 2, 1);
+
+  // 更新相位文字
+  const labels = pattern.labels;
+  const currentLabel = labels[breathPhase];
+  if(currentLabel){
+    phaseText.textContent = currentLabel;
+    phaseText.style.opacity = '1';
+  } else {
+    phaseText.style.opacity = '0';
+  }
+}
+
+function nextPhase(){
+  const prevPhase = breathPhase;
+  breathPhase = (breathPhase + 1) % 4;
+
+  // 检查是否完成一个完整周期
+  if(breathPhase === 0){
+    cycleNumber++;
+    updateCycleDisplay();
+    if(cycleNumber % 6 === 0){
+      showQuote();
+    }
+    if(cycleNumber % 3 === 0){
+      playCompleteChime();
+    }
+  }
+
+  playPhaseTone(breathPhase);
+
+  // 触感提示
+  if(breathPhase === 0) vibrate(20);
+  else if(breathPhase === 2) vibrate([10,5,10]);
+}
+
+function updateCycleDisplay(){
+  const roman = ['', 'Ⅰ','Ⅱ','Ⅲ','Ⅳ','Ⅴ','Ⅵ','Ⅶ','Ⅷ','Ⅸ','Ⅹ','Ⅺ','Ⅻ','ⅩⅢ','ⅩⅣ','ⅩⅤ','ⅩⅥ'];
+  const r = roman[Math.min(cycleNumber, 16)] || cycleNumber;
+  cycleCount.textContent = `第 ${r} 息`;
+}
+
+let quoteTimeout = null;
+function showQuote(){
+  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  quoteEl.textContent = q;
+  quoteEl.style.opacity = '1';
+  clearTimeout(quoteTimeout);
+  quoteTimeout = setTimeout(() => {
+    quoteEl.style.opacity = '0.12';
+  }, 6000);
+}
+
+// ── 渲染系统 ──
+let timeAccum = 0;
+let fadeInAmount = 0;
+
+function render(timestamp){
+  if(!lastFrameTime) lastFrameTime = timestamp;
+  const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = timestamp;
+  timeAccum += dt;
+
+  if(isRunning){
+    updateBreath(dt);
+    updateAudio(breathValue);
+  }
+
+  // 背景
+  const bg = breathValue;
+  const c1 = PATTERNS[currentPattern].color1;
+  const c2 = PATTERNS[currentPattern].color2;
+
+  // 多层背景渐变
+  const gradBg = ctx.createRadialGradient(
+    W/2, H/2, 0,
+    W/2, H/2, Math.max(W,H) * 0.7
+  );
+  const r = Math.round(c1[0] * bg + 3 * (1-bg));
+  const g = Math.round(c1[1] * bg + 3 * (1-bg));
+  const b = Math.round(c1[2] * bg + 7 * (1-bg));
+  gradBg.addColorStop(0, `rgb(${Math.min(r*1.3,255)},${Math.min(g*1.2,255)},${Math.min(b*1.5,255)})`);
+  gradBg.addColorStop(0.4, `rgb(${Math.round(r*0.4)},${Math.round(g*0.35)},${Math.round(b*0.5)})`);
+  gradBg.addColorStop(1, '#050507');
+  ctx.fillStyle = gradBg;
+  ctx.fillRect(0, 0, W, H);
+
+  // 中心点
+  const cx = W / 2;
+  const cy = H / 2;
+  const baseOrbRadius = Math.min(W, H) * 0.12;
+  const orbRadius = baseOrbRadius + breathValue * Math.min(W,H) * 0.18;
+
+  // ── 外圈光晕 ──
+  for(let i = 4; i >= 0; i--){
+    const rr = orbRadius * (1 + i * 0.35);
+    const alpha = 0.04 / (i + 1);
+    ctx.beginPath();
+    ctx.arc(cx, cy, rr, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${c2[0]},${c2[1]},${c2[2]},${alpha})`;
+    ctx.fill();
+  }
+
+  // ── 主球体渐变 ──
+  const orbGrad = ctx.createRadialGradient(
+    cx - orbRadius*0.3, cy - orbRadius*0.3, 0,
+    cx, cy, orbRadius
+  );
+  const coreR = Math.round(c1[0] + (255-c1[0])*0.15);
+  const coreG = Math.round(c1[1] + (255-c1[1])*0.15);
+  const coreB = Math.round(c1[2] + (255-c1[2])*0.2);
+  orbGrad.addColorStop(0, `rgba(${coreR},${coreG},${coreB},${0.25 + breathValue*0.15})`);
+  orbGrad.addColorStop(0.5, `rgba(${c1[0]},${c1[1]},${c1[2]},${0.12 + breathValue*0.08})`);
+  orbGrad.addColorStop(1, `rgba(${c1[0]},${c1[1]},${c1[2]},0)`);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, orbRadius, 0, Math.PI * 2);
+  ctx.fillStyle = orbGrad;
+  ctx.fill();
+
+  // ── 内圈边缘光 ──
+  ctx.beginPath();
+  ctx.arc(cx, cy, orbRadius * 0.85, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(${c2[0]},${c2[1]},${c2[2]},${0.08 + breathValue*0.12})`;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // ── 核心亮点 ──
+  const coreRadius = orbRadius * (0.15 + breathValue * 0.1);
+  const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreRadius);
+  coreGrad.addColorStop(0, `rgba(255,255,255,${0.15 + breathValue*0.2})`);
+  coreGrad.addColorStop(0.5, `rgba(255,255,255,${0.05 + breathValue*0.05})`);
+  coreGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.beginPath();
+  ctx.arc(cx, cy, coreRadius, 0, Math.PI * 2);
+  ctx.fillStyle = coreGrad;
+  ctx.fill();
+
+  // ── 粒子系统 ──
+  const particleFieldRadius = orbRadius * 1.3 + 20;
+  for(let i = 0; i < particles.length; i++){
+    const p = particles[i];
+
+    // 呼吸驱动的轨道膨胀
+    const orbitExpand = 1 + breathValue * 0.35;
+    const angle = p.baseAngle + timeAccum * p.speed;
+    const radius = (p.baseRadius + p.radiusOffset) * orbitExpand;
+
+    // 只在球体附近或外部显示
+    if(radius < particleFieldRadius * 0.6) continue;
+
+    const px = cx + Math.cos(angle) * radius;
+    const py = cy + Math.sin(angle) * radius * 0.85; // 轻微椭圆
+
+    // 呼吸驱动的透明度闪烁
+    const twinkle = 0.3 + 0.7 * Math.abs(Math.sin(timeAccum * p.twinkleSpeed * 60 + p.twinklePhase));
+    const alpha = (0.1 + twinkle * 0.4) * (0.5 + breathValue * 0.5);
+
+    // 呼吸驱动的大小变化
+    const size = p.size * (0.6 + breathValue * 0.8) * (0.8 + p.depth * 0.4);
+
+    // 颜色插值
+    const pr = Math.round(c1[0] + (c2[0]-c1[0]) * p.depth);
+    const pg = Math.round(c1[1] + (c2[1]-c1[1]) * p.depth);
+    const pb = Math.round(c1[2] + (c2[2]-c1[2]) * p.depth);
+
+    // 粒子光晕
+    if(p.size > 1.5){
+      const pg2 = ctx.createRadialGradient(px, py, 0, px, py, size * 3);
+      pg2.addColorStop(0, `rgba(${pr},${pg},${pb},${alpha*0.3})`);
+      pg2.addColorStop(1, `rgba(${pr},${pg},${pb},0)`);
+      ctx.beginPath();
+      ctx.arc(px, py, size * 3, 0, Math.PI * 2);
+      ctx.fillStyle = pg2;
+      ctx.fill();
+    }
+
+    // 粒子核心
+    ctx.beginPath();
+    ctx.arc(px, py, size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${pr},${pg},${pb},${alpha})`;
+    ctx.fill();
+  }
+
+  // ── 呼吸涟漪环 ──
+  if(breathPhase === 0 && phaseProgress < 0.3){
+    const rippleR = orbRadius * (1 + phaseProgress * 2.5);
+    const rippleAlpha = (1 - phaseProgress / 0.3) * 0.15;
+    ctx.beginPath();
+    ctx.arc(cx, cy, rippleR, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${c2[0]},${c2[1]},${c2[2]},${rippleAlpha})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // ── 全局噪点叠加 ──
+  if(timeAccum - Math.floor(timeAccum) < 0.03){
+    addFilmGrain();
+  }
+
+  requestAnimationFrame(render);
+}
+
+function addFilmGrain(){
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imgData.data;
+  const len = data.length;
+  for(let i = 0; i < len; i += 4 * 7){
+    const noise = (Math.random() - 0.5) * 6;
+    data[i] = Math.max(0, Math.min(255, data[i] + noise));
+    data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
+    data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// ── 交互控制 ──
+function startBreathing(){
+  if(isRunning) return;
+  initAudio();
+  if(audioCtx && audioCtx.state === 'suspended'){
+    audioCtx.resume();
+  }
+  isRunning = true;
+  breathPhase = 0;
+  phaseProgress = 0;
+  cycleNumber = 1;
+  breathValue = 0;
+  targetBreath = 0;
+  updateCycleDisplay();
+  introEl.classList.add('gone');
+  phaseText.style.opacity = '1';
+  vibrate(30);
+  playPhaseTone(0);
+}
+
+function pauseBreathing(){
+  isRunning = false;
+  if(masterGain && audioCtx){
+    masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 1);
+  }
+}
+
+// ── 事件监听 ──
+introEl.addEventListener('click', startBreathing);
+introEl.addEventListener('touchstart', (e) => { e.preventDefault(); startBreathing(); }, {passive:false});
+
+canvas.addEventListener('click', () => {
+  if(isRunning){
+    // 单击暂停/恢复
+    if(isRunning){
+      pauseBreathing();
+      phaseText.textContent = '暂停';
+      phaseText.style.opacity = '0.5';
+    }
+  } else if(introEl.classList.contains('gone')){
+    startBreathing();
+  }
+});
+
+// 设置面板
+settingsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  settingsPanel.classList.add('open');
+  if(isRunning) pauseBreathing();
+});
+
+closeSettings.addEventListener('click', () => {
+  settingsPanel.classList.remove('open');
+});
+
+document.querySelectorAll('.pattern-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentPattern = parseInt(btn.dataset.pattern);
+    // 重置
+    breathPhase = 0;
+    phaseProgress = 0;
+    cycleNumber = 1;
+    breathValue = 0;
+    targetBreath = 0;
+    updateCycleDisplay();
+  });
+});
+
+// 键盘控制
+document.addEventListener('keydown', (e) => {
+  if(e.code === 'Space'){
+    e.preventDefault();
+    if(introEl.classList.contains('gone')){
+      if(isRunning) { pauseBreathing(); phaseText.textContent = '暂停'; }
+      else startBreathing();
+    } else {
+      startBreathing();
+    }
+  }
+  if(e.key === 'Escape'){
+    settingsPanel.classList.remove('open');
+  }
+  // 数字键切换模式
+  if(e.key >= '1' && e.key <= '4'){
+    const idx = parseInt(e.key) - 1;
+    currentPattern = idx;
+    document.querySelectorAll('.pattern-btn').forEach((b,i) => {
+      b.classList.toggle('active', i === idx);
+    });
+  }
+});
+
+// 页面隐藏时暂停
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden && isRunning){
+    pauseBreathing();
+  }
+});
+
+// ── 启动渲染循环 ──
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
